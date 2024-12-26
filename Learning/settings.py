@@ -30,9 +30,9 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'jhss12ahariharan@gmail.com'
-EMAIL_HOST_PASSWORD = 'ouun yptw knpk rlcc'
+EMAIL_HOST_PASSWORD = 'wjqd nlyg gjvm plpd'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  
-ALLOWED_HOSTS = ['localhost', '127.0.0.1',]
+ALLOWED_HOSTS = []
 
 
 # Application definition
