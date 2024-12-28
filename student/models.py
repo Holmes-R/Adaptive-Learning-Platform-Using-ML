@@ -3,9 +3,9 @@ import random
 from datetime import datetime, timedelta
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
 
-# Create your models here.
-
+# Create your models here
 class LoginForm(models.Model):
     name = models.CharField(null=False,max_length=50)
     email = models.EmailField(null=False,max_length=100,default=' ')
@@ -20,7 +20,7 @@ class LoginForm(models.Model):
         return f'{self.name} ({self.email})'
 
     class Meta:
-        verbose_name_plural = 'Login Students'
+        verbose_name_plural = 'Sign-Up Student Account' 
 
         
     def generate_otp(self):
@@ -75,7 +75,8 @@ MARK_TYPE = [
 ]
 
 class Home(models.Model):
-    college_name = models.CharField(max_length=100)
+    student_name = models.OneToOneField(LoginForm,null=True,on_delete=models.CASCADE,related_name='Login_student')
+    college_name = models.CharField(null=False,max_length=100)
     course = models.CharField(null=False, max_length=30)
     year = models.CharField(choices=YEAR, max_length=2) 
     CGPA = models.CharField(choices=MARK_TYPE, max_length=10)  
@@ -102,3 +103,31 @@ class Home(models.Model):
     
     class Meta:
         verbose_name_plural = 'Student Information'
+
+
+class StudentID(models.Model):
+    student = models.OneToOneField(LoginForm,on_delete=models.CASCADE,related_name='student_name')
+    unique_id = models.CharField(max_length=4,unique=True,editable=False)
+    password = models.CharField(max_length=8)
+
+    def save(self,*args,**kwargs):
+        if not self.unique_id:
+            while True:
+                random_id = str(random.randint(1000, 9999))
+                if not StudentID.objects.filter(unique_id=random_id).exists():
+                    self.unique_id = random_id
+                    break
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def generate_unique_student_id():
+        while True:
+            random_id = get_random_string(length=4, allowed_chars='0123456789')
+            if not StudentID.objects.filter(student_id=random_id).exists():
+                return random_id
+            
+    def __str__(self):
+        return f"StudentID: {self.unique_id} - {self.student.name}"
+            
+    class Meta:
+        verbose_name_plural = 'Sign-In Student Account'
