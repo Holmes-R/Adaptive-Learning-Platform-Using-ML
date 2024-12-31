@@ -6,6 +6,7 @@ urlpatterns = [
     path('verify_otp/<str:email>/', views.verify_otp, name='verify_otp'),
      path('information/', views.getInformation, name='getInformation'),
      path('sign-in/', views.signInUser, name='sign_in'),
+      path('upload/', views.upload_file, name='upload_file'),
 
 ]
 

@@ -131,3 +131,18 @@ class StudentID(models.Model):
             
     class Meta:
         verbose_name_plural = 'Sign-In Student Account'
+
+
+STUDENT_CHOICE = [
+    ('Summary','Summary'),
+    ('Keywords','Keywords'),
+    ('Full-Text','Full-Text'),
+]
+
+def validate_files(value):
+    if not value.name.endswith(('.docx''.pdf')):
+        raise ValidationError('Only .docx and .pdf files are allowed here')
+class UploadFile(models.model):
+    upload_file = models.FileField(null=False,upload_to='documents/',validators=[validate_file_extension])
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    student_options = models.CharField(choices=STUDENT_CHOICE,max_length=30)

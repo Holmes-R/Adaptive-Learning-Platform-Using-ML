@@ -2,8 +2,9 @@ from django.contrib.auth.models import User
 from django.contrib.auth import login as auth_login
 from django.db import IntegrityError
 from django.http import JsonResponse
-from .models import LoginForm ,Home ,StudentID
-from django.shortcuts import get_object_or_404
+from .models import LoginForm ,Home ,StudentID ,UploadFile
+from .forms import UploadForm
+from django.shortcuts import get_object_or_404 , redirect , render
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.utils import timezone
@@ -188,4 +189,16 @@ def signInUser(request):
             return JsonResponse({"error": "Invalid JSON format."}, status=400)
 
     return JsonResponse({"error": "Invalid request method."}, status=405)
+
+
+def upload_file(request):
+    if request.method == 'POST':
+        form = UploadForm(request.POST,request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('file_list')
+    else:
+        form = UploadForm()
+    return render(request,'upload.html',{'form':form})
+
 
