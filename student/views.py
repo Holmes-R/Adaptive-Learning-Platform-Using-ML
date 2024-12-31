@@ -99,14 +99,11 @@ def getInformation(request):
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON format."}, status=400)
 
-        # Access the password from the JSON payload
         password = data.get('user_password')
 
-        # Check if password is provided and is not empty
         if not password:
             return JsonResponse({"error": "Password is required."}, status=400)
 
-        # Continue with the rest of the logic
         college_name = data.get('college_name')
         course = data.get('course')
         year = data.get('year')
@@ -114,7 +111,7 @@ def getInformation(request):
         student_choice = data.get('student_choice')
         cgpa_percentage = data.get('cgpa_percentage')
         cgpa_number = data.get('cgpa_number')
-        email = data.get('email')  # Add email to identify the student
+        email = data.get('email') 
 
         if not email:
             return JsonResponse({"error": "Email is required to identify the student."}, status=400)
@@ -125,20 +122,16 @@ def getInformation(request):
             return JsonResponse({"error": "CGPA number is required when CGPA type is 'cgpa'."}, status=400)
 
         try:
-            # Find or create the LoginForm instance for the existing student
             login_form_instance = LoginForm.objects.filter(email=email).first()
 
             if login_form_instance:
-                # If the LoginForm exists, update its password
                 login_form_instance.user_password = password
                 login_form_instance.save()
             else:
-                # If the LoginForm does not exist, create a new one
                 login_form_instance = LoginForm.objects.create(email=email, user_password=password)
 
-            # Now update or create the Home instance for the student
             home_instance, created = Home.objects.update_or_create(
-                student_name=login_form_instance,  # Associate with LoginForm
+                student_name=login_form_instance, 
                 defaults={
                     'college_name': college_name,
                     'course': course,
@@ -150,11 +143,9 @@ def getInformation(request):
                 }
             )
 
-            # If Home instance is new, save it
             if created:
                 home_instance.save()
 
-            # Now create or update the StudentID instance with the correct LoginForm instance
             student_id_instance, created = StudentID.objects.update_or_create(
                 student=login_form_instance, 
                 defaults={'password': password}
