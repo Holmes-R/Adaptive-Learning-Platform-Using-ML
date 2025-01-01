@@ -1,9 +1,10 @@
 from django.db import models
 import random 
 from datetime import datetime, timedelta
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError 
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
+from django.core.validators import FileExtensionValidator
 
 # Create your models here
 class LoginForm(models.Model):
@@ -139,10 +140,7 @@ STUDENT_CHOICE = [
     ('Full-Text','Full-Text'),
 ]
 
-def validate_files(value):
-    if not value.name.endswith(('.docx''.pdf')):
-        raise ValidationError('Only .docx and .pdf files are allowed here')
-class UploadFile(models.model):
-    upload_file = models.FileField(null=False,upload_to='documents/',validators=[validate_file_extension])
+class UploadFile(models.Model):
+    upload_file = models.FileField(null=False,upload_to='documents/',validators=[FileExtensionValidator(['pdf', 'docx'])])
     uploaded_at = models.DateTimeField(auto_now_add=True)
     student_options = models.CharField(choices=STUDENT_CHOICE,max_length=30)

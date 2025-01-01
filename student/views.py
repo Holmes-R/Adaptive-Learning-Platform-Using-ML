@@ -201,4 +201,6 @@ def upload_file(request):
         form = UploadForm()
     return render(request,'upload.html',{'form':form})
 
-
+def file_list(request):
+    files = UploadFile.objects.all()
+    return render(request, 'file_list.html', {'files': files})
