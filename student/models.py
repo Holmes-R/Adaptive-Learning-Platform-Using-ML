@@ -10,9 +10,6 @@ import os
 from pptxtopdf import convert
 import pythoncom
 
-
-
-
 # Create your models here
 class LoginForm(models.Model):
     name = models.CharField(null=False,max_length=50)
@@ -162,22 +159,19 @@ class UploadFile(models.Model):
     
     def convert_pptx_to_pdf(self):
         pptx_path = self.upload_file.path
-        pdf_dir = os.path.dirname(pptx_path)  # Directory where the .pdf will be saved
+        pdf_dir = os.path.dirname(pptx_path)  
 
         try:
-            # Initialize COM
             pythoncom.CoInitialize()
 
-            # Convert .pptx to .pdf
             convert(pptx_path, pdf_dir)
 
-            # Update file name in the model
+         
             pdf_path = pptx_path.replace('.pptx', '.pdf')
-            if os.path.exists(pdf_path):  # Ensure the .pdf was created
+            if os.path.exists(pdf_path): 
                 self.upload_file.name = self.upload_file.name.replace('.pptx', '.pdf')
                 self.save()
         except Exception as e:
             print(f"Error converting .pptx to .pdf: {e}")
         finally:
-            # Uninitialize COM
             pythoncom.CoUninitialize()
