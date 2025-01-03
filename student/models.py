@@ -143,12 +143,10 @@ STUDENT_CHOICE = [
     ('Keywords','Keywords'),
     ('Full-Text','Full-Text'),
 ]
-
 class UploadFile(models.Model):
     upload_file = models.FileField(null=False,upload_to='documents/',validators=[FileExtensionValidator(['pdf', 'docx','pptx'])])
     uploaded_at = models.DateTimeField(auto_now_add=True)
     student_options = models.CharField(choices=STUDENT_CHOICE,max_length=30)
-
     class Meta:
         verbose_name_plural = 'File Upload'
 
@@ -163,10 +161,7 @@ class UploadFile(models.Model):
 
         try:
             pythoncom.CoInitialize()
-
             convert(pptx_path, pdf_dir)
-
-         
             pdf_path = pptx_path.replace('.pptx', '.pdf')
             if os.path.exists(pdf_path): 
                 self.upload_file.name = self.upload_file.name.replace('.pptx', '.pdf')
