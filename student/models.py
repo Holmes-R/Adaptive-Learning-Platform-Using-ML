@@ -5,6 +5,13 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.core.validators import FileExtensionValidator
+import subprocess
+import os
+from pptxtopdf import convert
+import pythoncom
+
+
+
 
 # Create your models here
 class LoginForm(models.Model):
@@ -141,6 +148,36 @@ STUDENT_CHOICE = [
 ]
 
 class UploadFile(models.Model):
-    upload_file = models.FileField(null=False,upload_to='documents/',validators=[FileExtensionValidator(['pdf', 'docx'])])
+    upload_file = models.FileField(null=False,upload_to='documents/',validators=[FileExtensionValidator(['pdf', 'docx','pptx'])])
     uploaded_at = models.DateTimeField(auto_now_add=True)
     student_options = models.CharField(choices=STUDENT_CHOICE,max_length=30)
+
+    class Meta:
+        verbose_name_plural = 'File Upload'
+
+    def save(self,*args,**kwargs):
+        super().save(*args,**kwargs)
+        if self.upload_file.name.endswith('.pptx'):
+            self.convert_pptx_to_pdf()
+    
+    def convert_pptx_to_pdf(self):
+        pptx_path = self.upload_file.path
+        pdf_dir = os.path.dirname(pptx_path)  # Directory where the .pdf will be saved
+
+        try:
+            # Initialize COM
+            pythoncom.CoInitialize()
+
+            # Convert .pptx to .pdf
+            convert(pptx_path, pdf_dir)
+
+            # Update file name in the model
+            pdf_path = pptx_path.replace('.pptx', '.pdf')
+            if os.path.exists(pdf_path):  # Ensure the .pdf was created
+                self.upload_file.name = self.upload_file.name.replace('.pptx', '.pdf')
+                self.save()
+        except Exception as e:
+            print(f"Error converting .pptx to .pdf: {e}")
+        finally:
+            # Uninitialize COM
+            pythoncom.CoUninitialize()

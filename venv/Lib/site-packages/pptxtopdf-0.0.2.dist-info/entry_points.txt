@@ -1,0 +1,2 @@
+[console_scripts]
+pptxtopdf = pptxtopdf.__main__:main
