@@ -5,12 +5,19 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.core.validators import FileExtensionValidator
-import subprocess
 import os
 from pptxtopdf import convert
 import pythoncom
-
+from rake_nltk import Rake
+from PyPDF2 import PdfReader
+import docx
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.summarizers.lsa import LsaSummarizer
 # Create your models here
+
+"""
+    Login New Student
+"""
 class LoginForm(models.Model):
     name = models.CharField(null=False,max_length=50)
     email = models.EmailField(null=False,max_length=100,default=' ')
@@ -58,8 +65,10 @@ class LoginForm(models.Model):
         """Compares a plain text password with the stored hashed password."""
         from django.contrib.auth.hashers import check_password
         return check_password(password, self.user_password)
-    
 
+"""
+    Getting Student Information 
+"""
 YEAR = [
     ('1', '1st Year'),
     ('2', '2nd Year'),
@@ -78,7 +87,6 @@ MARK_TYPE = [
     ('percentage', 'Percentage'),
     ('cgpa', 'CGPA'),
 ]
-
 class Home(models.Model):
     student_name = models.OneToOneField(LoginForm,null=True,on_delete=models.CASCADE,related_name='Login_student')
     college_name = models.CharField(null=False,max_length=100)
@@ -109,7 +117,9 @@ class Home(models.Model):
     class Meta:
         verbose_name_plural = 'Student Information'
 
-
+""" 
+    Sign-In Existing Student Account
+"""
 class StudentID(models.Model):
     student = models.OneToOneField(LoginForm,on_delete=models.CASCADE,related_name='student_name')
     unique_id = models.CharField(max_length=4,unique=True,editable=False)
@@ -138,23 +148,38 @@ class StudentID(models.Model):
         verbose_name_plural = 'Sign-In Student Account'
 
 
+"""
+    Uploading the File
+"""
 STUDENT_CHOICE = [
     ('Summary','Summary'),
     ('Keywords','Keywords'),
-    ('Full-Text','Full-Text'),
 ]
+
 class UploadFile(models.Model):
     upload_file = models.FileField(null=False,upload_to='documents/',validators=[FileExtensionValidator(['pdf', 'docx','pptx'])])
     uploaded_at = models.DateTimeField(auto_now_add=True)
     student_options = models.CharField(choices=STUDENT_CHOICE,max_length=30)
+    keywords = models.TextField(null=True, blank=True) 
+    summary = models.TextField(null=True, blank=True)  
+
     class Meta:
         verbose_name_plural = 'File Upload'
 
-    def save(self,*args,**kwargs):
-        super().save(*args,**kwargs)
-        if self.upload_file.name.endswith('.pptx'):
-            self.convert_pptx_to_pdf()
-    
+
+    def extract_keywords_from_text(self, text):
+        r = Rake()
+        r.extract_keywords_from_text(text)
+        ranked_phrases = r.get_ranked_phrases_with_scores()
+        return [phrase for score, phrase in ranked_phrases[:7]]
+
+    # Function to extract summary using Sumy
+    def generate_summary_from_text(self, text, num_sentences=3):
+        parser = PlaintextParser.from_string(text, PlaintextParser.from_string(text))
+        summarizer = LsaSummarizer()
+        summary = summarizer(parser.document, num_sentences)
+        return ' '.join([str(sentence) for sentence in summary])
+
     def convert_pptx_to_pdf(self):
         pptx_path = self.upload_file.path
         pdf_dir = os.path.dirname(pptx_path)  
@@ -163,10 +188,63 @@ class UploadFile(models.Model):
             pythoncom.CoInitialize()
             convert(pptx_path, pdf_dir)
             pdf_path = pptx_path.replace('.pptx', '.pdf')
-            if os.path.exists(pdf_path): 
+            if os.path.exists(pdf_path):  
                 self.upload_file.name = self.upload_file.name.replace('.pptx', '.pdf')
-                self.save()
+                self.save() 
         except Exception as e:
             print(f"Error converting .pptx to .pdf: {e}")
         finally:
-            pythoncom.CoUninitialize()
+            pythoncom.CoUninitialize() 
+
+    def process_file(self):
+        file_path = self.upload_file.path
+
+        if self.student_options == 'Keywords':
+            if file_path.endswith('.pdf'):
+                self.keywords = self.extract_keywords_from_pdf(file_path)
+            elif file_path.endswith('.docx'):
+                self.keywords = self.extract_keywords_from_docx(file_path)
+            self.save()
+        elif self.student_options == 'Summary':
+            if file_path.endswith('.pdf'):
+                self.summary = self.generate_summary_from_pdf(file_path)
+            elif file_path.endswith('.docx'):
+                self.summary = self.generate_summary_from_docx(file_path)
+            self.save()
+
+    def extract_keywords_from_pdf(self, file_path):
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text()
+        return self.extract_keywords_from_text(text)
+
+    def generate_summary_from_pdf(self, file_path, num_sentences=3):
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text()
+        return self.generate_summary_from_text(text, num_sentences)
+
+    def extract_keywords_from_docx(self, file_path):
+        doc = docx.Document(file_path)
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return self.extract_keywords_from_text(text)
+
+    def generate_summary_from_docx(self, file_path, num_sentences=3):
+        doc = docx.Document(file_path)
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return self.generate_summary_from_text(text, num_sentences)
+
+    def save(self, *args, **kwargs):
+        if self.upload_file.name.endswith('.pptx'):
+            self.convert_pptx_to_pdf()
+        
+        super().save(*args, **kwargs)
+        self.process_file()
