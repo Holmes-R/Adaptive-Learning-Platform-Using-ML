@@ -10,9 +10,12 @@ from pptxtopdf import convert
 import pythoncom
 from rake_nltk import Rake
 from PyPDF2 import PdfReader
-import docx
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.summarizers.lsa import LsaSummarizer
+import docx
+import nltk
+from nltk.tokenize import PunktSentenceTokenizer
+
 # Create your models here
 
 """
@@ -168,13 +171,18 @@ class UploadFile(models.Model):
 
 
     def extract_keywords_from_text(self, text):
+        try:
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            nltk.download('punkt')
         r = Rake()
         r.extract_keywords_from_text(text)
         ranked_phrases = r.get_ranked_phrases_with_scores()
         return [phrase for score, phrase in ranked_phrases[:7]]
 
-    # Function to extract summary using Sumy
     def generate_summary_from_text(self, text, num_sentences=3):
+        tokenizer = PunktSentenceTokenizer()
+
         parser = PlaintextParser.from_string(text, PlaintextParser.from_string(text))
         summarizer = LsaSummarizer()
         summary = summarizer(parser.document, num_sentences)
